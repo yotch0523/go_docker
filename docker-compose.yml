@@ -1,0 +1,55 @@
+version: '3'
+services:
+    app:
+        container_name: golang-env
+        build:
+            context: .
+            dockerfile: ./docker/app/Dockerfile
+            args:
+                - USER_NAME=$USER_NAME
+                - GROUP_NAME=$GROUP_NAME
+                - UID=$UID
+                - GID=$GID
+                - USER_PASSWORD=$USER_PASSWORD
+                - TZ=$TZ
+        volumes:
+            - ./src/app:/go/home/$USER_NAME
+        ports:
+            - 8080:8080
+        tty: true
+        depends_on:
+            - db
+        env_file:
+            - ./.env
+        networks:
+            - golang_network
+    db:
+        container_name: db-for-golang
+        build:
+            context: .
+            dockerfile: ./docker/db/Dockerfile
+            args:
+                - DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+                - DB_ADMIN_USERNAME=${DB_ADMIN_USERNAME}
+                - DB_ADMIN_PASSWORD=${DB_ADMIN_PASSWORD}
+        volumes:
+            - db-store:/var/lib/mysql
+            - ./docker/db/conf/my.cnf:/etc/mysql/conf.d/my.cnf
+        ports:
+            - "33306:3306"
+        restart: always
+        env_file:
+            - ./.env
+        networks:
+            - golang_network
+networks:
+    golang_network:
+        driver: bridge
+        ipam:
+            driver: default
+            config:
+            - subnet: "192.168.3.0/24"
+              gateway: "192.168.3.1"
+
+volumes:
+    db-store:
